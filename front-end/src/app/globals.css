@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root {
+/* :root {
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -17,10 +17,88 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
-}
+} */
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* app/globals.css or a dedicated CSS module */
+.rbc-calendar {
+  font-family: "Inter", sans-serif;
+}
+
+.rbc-toolbar-label {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937; /* Tailwind slate-800 */
+}
+
+.rbc-header {
+  background: #f9fafb; /* Tailwind gray-50 */
+  color: #1f2937;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border-bottom: 1px solid #e5e7eb; /* Tailwind gray-200 */
+}
+
+.rbc-time-content {
+  border-left: 1px solid #e5e7eb; /* app/globals.css or a dedicated CSS module */
+  .rbc-calendar {
+    font-family: "Inter", sans-serif;
+  }
+
+  .rbc-toolbar-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937; /* Tailwind slate-800 */
+  }
+
+  .rbc-header {
+    background: #f9fafb; /* Tailwind gray-50 */
+    color: #1f2937;
+    font-weight: 500;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #e5e7eb; /* Tailwind gray-200 */
+  }
+
+  .rbc-time-content {
+    border-left: 1px solid #e5e7eb;
+  }
+
+  .rbc-timeslot-group {
+    min-height: 4rem; /* Make rows taller */
+  }
+
+  .rbc-event {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .rbc-time-view {
+    border: none;
+  }
+
+  .rbc-time-header-content {
+    border-bottom: 1px solid #e5e7eb;
+  }
+}
+
+.rbc-timeslot-group {
+  min-height: 4rem; /* Make rows taller */
+}
+
+.rbc-event {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.rbc-time-view {
+  border: none;
+}
+
+.rbc-time-header-content {
+  border-bottom: 1px solid #e5e7eb;
 }

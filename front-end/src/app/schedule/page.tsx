@@ -1,49 +1,39 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Calendar, dateFnsLocalizer, Event } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
-import { useEffect, useState } from "react";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-
-const locales = {
-  "en-US": enUS,
-};
-
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  locales,
-});
 
 interface CustomEvent extends Event {
   type: "Consultation" | "Meeting" | "Operation";
   room: string;
 }
 
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales: { "en-US": enUS },
+});
+
 export default function SchedulePage() {
   const [events, setEvents] = useState<CustomEvent[]>([]);
 
   useEffect(() => {
-    fetch("/api/events")
+    fetch("/api/schedule")
       .then((res) => res.json())
-      .then((data) => setEvents(data));
+      .then((data: any[]) => {
+        const parsed = data.map((event) => ({
+          ...event,
+          start: new Date(event.start),
+          end: new Date(event.end),
+        }));
+        setEvents(parsed);
+      });
   }, []);
-
-  const eventStyleGetter = (event: CustomEvent) => {
-    const colors = {
-      Consultation: "bg-green-200",
-      Operation: "bg-red-300",
-      Meeting: "bg-yellow-200",
-    };
-    return {
-      className: `${
-        colors[event.type]
-      } text-black rounded-md border border-gray-300 px-2 py-1`,
-    };
-  };
 
   const handleSelectSlot = async ({
     start,
@@ -53,24 +43,37 @@ export default function SchedulePage() {
     end: Date;
   }) => {
     const title = prompt("Enter title:");
-    const type = prompt("Enter type (Consultation/Meeting/Operation):") as
-      | "Consultation"
-      | "Meeting"
-      | "Operation";
-    const room = prompt("Enter room:") || "N/A";
+    const type = prompt(
+      "Enter type (Consultation/Meeting/Operation):"
+    ) as CustomEvent["type"];
+    const room = prompt("Enter room:");
+    if (!title || !type || !room) return;
 
-    if (!title || !type) return;
-
-    const newEvent: CustomEvent = { title, start, end, type, room };
-
-    await fetch("/api/events", {
+    const newEvent = { title, type, room, start, end };
+    // Send to backend
+    await fetch("/api/schedule", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newEvent),
     });
 
+    // Update UI immediately
     setEvents((prev) => [...prev, newEvent]);
   };
+
+  const eventStyleGetter = (event: CustomEvent) => ({
+    style: {
+      backgroundColor:
+        event.type === "Consultation"
+          ? "#A7F3D0"
+          : event.type === "Meeting"
+          ? "#FDE68A"
+          : "#FCA5A5",
+      color: "#000",
+      borderRadius: "6px",
+      padding: "4px",
+    },
+  });
 
   return (
     <div className="p-6">
@@ -81,16 +84,11 @@ export default function SchedulePage() {
           events={events}
           startAccessor="start"
           endAccessor="end"
-          style={{ height: 650 }}
+          style={{ height: 600 }}
           eventPropGetter={eventStyleGetter}
-          views={["week"]}
-          defaultView="week"
-          step={60}
-          timeslots={1}
           selectable
           onSelectSlot={handleSelectSlot}
-          min={new Date(2024, 5, 16, 8)}
-          max={new Date(2024, 5, 16, 17)}
+          onSelectEvent={(event) => alert(event.title)}
         />
       </div>
     </div>

@@ -1,14 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Calendar, dateFnsLocalizer, Event } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import {
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  isBefore,
+  isAfter,
+} from "date-fns";
 import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
-interface CustomEvent extends Event {
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface CustomEvent {
+  id?: string;
+  title: string;
   type: "Consultation" | "Meeting" | "Operation";
   room: string;
+  start: Date;
+  end: Date;
 }
 
 const localizer = dateFnsLocalizer({
@@ -19,49 +50,109 @@ const localizer = dateFnsLocalizer({
   locales: { "en-US": enUS },
 });
 
+const ROOMS = ["Room A", "Room B", "Room C"];
+const TYPES = ["Consultation", "Meeting", "Operation"];
+
 export default function SchedulePage() {
   const [events, setEvents] = useState<CustomEvent[]>([]);
+  const [modalAdd, setModalAdd] = useState<{
+    open: boolean;
+    event?: CustomEvent;
+  }>({ open: false });
+  const [modalView, setModalView] = useState<CustomEvent | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     fetch("/api/schedule")
-      .then((res) => res.json())
+      .then((r) => r.json())
       .then((data: any[]) => {
-        const parsed = data.map((event) => ({
-          ...event,
-          start: new Date(event.start),
-          end: new Date(event.end),
+        const parsed = data.map((ev) => ({
+          id: ev._id,
+          title: ev.title,
+          type: ev.type,
+          room: ev.room,
+          start: new Date(ev.start),
+          end: new Date(ev.end),
         }));
         setEvents(parsed);
+        setLoading(false);
       });
   }, []);
 
-  const handleSelectSlot = async ({
-    start,
-    end,
-  }: {
-    start: Date;
-    end: Date;
-  }) => {
-    const title = prompt("Enter title:");
-    const type = prompt(
-      "Enter type (Consultation/Meeting/Operation):"
-    ) as CustomEvent["type"];
-    const room = prompt("Enter room:");
-    if (!title || !type || !room) return;
-
-    const newEvent = { title, type, room, start, end };
-    // Send to backend
-    await fetch("/api/schedule", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newEvent),
+  const handleSelectSlot = ({ start, end }: any) => {
+    setModalAdd({
+      open: true,
+      event: { title: "", type: "Consultation", room: ROOMS[0], start, end },
     });
-
-    // Update UI immediately
-    setEvents((prev) => [...prev, newEvent]);
   };
 
-  const eventStyleGetter = (event: CustomEvent) => ({
+  const isOverlapping = (
+    start: Date,
+    end: Date,
+    room: string,
+    excludeId?: string
+  ) => {
+    return events.some(
+      (e) =>
+        e.room === room &&
+        e.id !== excludeId &&
+        isBefore(start, e.end) &&
+        isAfter(end, e.start)
+    );
+  };
+
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget as any;
+    const id = modalAdd.event?.id;
+    const payload: CustomEvent = {
+      title: form.title.value,
+      type: form.type.value,
+      room: form.room.value,
+      start: new Date(form.start.value),
+      end: new Date(form.end.value),
+    };
+
+    if (isOverlapping(payload.start, payload.end, payload.room, id)) {
+      alert("This time slot overlaps with another event in the same room.");
+      return;
+    }
+
+    const method = id ? "PUT" : "POST";
+    const url = id ? `/api/schedule/${id}` : "/api/schedule";
+    setLoading(true);
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setLoading(false);
+
+    if (res.ok) {
+      const saved = await res.json();
+      const updated = { id: saved._id || id, ...payload };
+      setEvents((prev) =>
+        id ? prev.map((e) => (e.id === id ? updated : e)) : [...prev, updated]
+      );
+      setModalAdd({ open: false });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!modalView?.id) return;
+    setLoading(true);
+    const res = await fetch(`/api/schedule/${modalView.id}`, {
+      method: "DELETE",
+    });
+    setLoading(false);
+    if (res.ok) {
+      setEvents(events.filter((e) => e.id !== modalView.id));
+      setModalView(null);
+    }
+  };
+
+  const eventStyle = (event: CustomEvent) => ({
     style: {
       backgroundColor:
         event.type === "Consultation"
@@ -69,8 +160,8 @@ export default function SchedulePage() {
           : event.type === "Meeting"
           ? "#FDE68A"
           : "#FCA5A5",
-      color: "#000",
       borderRadius: "6px",
+      color: "#000",
       padding: "4px",
     },
   });
@@ -78,19 +169,147 @@ export default function SchedulePage() {
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Schedule</h1>
-      <div className="shadow-lg rounded-lg border border-gray-200 overflow-hidden">
+      {loading && <p className="text-center mb-4">Loading...</p>}
+      <div className="shadow-lg rounded-lg overflow-hidden">
         <Calendar
           localizer={localizer}
           events={events}
           startAccessor="start"
           endAccessor="end"
-          style={{ height: 600 }}
-          eventPropGetter={eventStyleGetter}
           selectable
           onSelectSlot={handleSelectSlot}
-          onSelectEvent={(event) => alert(event.title)}
+          onSelectEvent={(e) => setModalView(e)}
+          defaultView="week"
+          step={30}
+          timeslots={2}
+          eventPropGetter={eventStyle}
+          style={{ height: "85vh" }}
         />
       </div>
+
+      {/* Add/Edit Dialog */}
+      <Dialog
+        open={modalAdd.open}
+        onOpenChange={(o) => setModalAdd({ open: o })}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {modalAdd.event?.id ? "Edit Event" : "Add Event"}
+            </DialogTitle>
+          </DialogHeader>
+          {modalAdd.event && (
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  name="title"
+                  defaultValue={modalAdd.event.title}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Type</Label>
+                <Select name="type" defaultValue={modalAdd.event.type}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Room</Label>
+                <Select name="room" defaultValue={modalAdd.event.room}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select room" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROOMS.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>From</Label>
+                <Input
+                  name="start"
+                  type="datetime-local"
+                  defaultValue={format(
+                    modalAdd.event.start,
+                    "yyyy-MM-dd'T'HH:mm"
+                  )}
+                  required
+                />
+              </div>
+              <div>
+                <Label>To</Label>
+                <Input
+                  name="end"
+                  type="datetime-local"
+                  defaultValue={format(
+                    modalAdd.event.end,
+                    "yyyy-MM-dd'T'HH:mm"
+                  )}
+                  required
+                />
+              </div>
+              <DialogFooter className="flex justify-end gap-2">
+                <DialogClose asChild>
+                  <Button variant="outline" type="button">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button type="submit">{loading ? "Saving..." : "Save"}</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Dialog */}
+      <Dialog open={!!modalView} onOpenChange={() => setModalView(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{modalView?.title}</DialogTitle>
+            <DialogDescription>
+              <p>
+                <strong>Type:</strong> {modalView?.type}
+              </p>
+              <p>
+                <strong>Room:</strong> {modalView?.room}
+              </p>
+              <p>
+                <strong>From:</strong> {modalView?.start.toLocaleString()}
+              </p>
+              <p>
+                <strong>To:</strong> {modalView?.end.toLocaleString()}
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-between">
+            <Button variant="destructive" onClick={handleDelete}>
+              {loading ? "Deleting..." : "Delete"}
+            </Button>
+            <Button
+              onClick={() => {
+                setModalAdd({ open: true, event: modalView! });
+                setModalView(null);
+              }}
+            >
+              Edit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

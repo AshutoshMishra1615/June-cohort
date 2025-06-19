@@ -2,7 +2,10 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/mongodb";
 import Patient from "@/model/Patient";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   await dbConnect();
 
   if (req.method === "GET") {
@@ -15,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const newPatient = await Patient.create(req.body);
       return res.status(201).json(newPatient);
     } catch (err) {
-      return res.status(400).json({ error: "Invalid patient data" });
+      return res.status(400).json({ error: `Invalid Patient Data ${err}` });
     }
   }
 

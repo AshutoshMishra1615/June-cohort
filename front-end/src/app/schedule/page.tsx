@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import { useState, useEffect } from "react";
+import { Calendar, dateFnsLocalizer, SlotInfo } from "react-big-calendar";
 import {
   format,
   parse,
@@ -32,15 +32,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-
-interface CustomEvent {
-  id?: string;
-  title: string;
-  type: "Consultation" | "Meeting" | "Operation";
-  room: string;
-  start: Date;
-  end: Date;
-}
+import { RawEvent, CustomEvent, EventType } from "@/types/schedule";
 
 const localizer = dateFnsLocalizer({
   format,
@@ -62,25 +54,30 @@ export default function SchedulePage() {
   const [modalView, setModalView] = useState<CustomEvent | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const isValidType = (t: string): t is EventType =>
+    ["Consultation", "Meeting", "Operation"].includes(t);
+
   useEffect(() => {
     setLoading(true);
     fetch("/api/schedule")
       .then((r) => r.json())
-      .then((data: any[]) => {
-        const parsed = data.map((ev) => ({
-          id: ev._id,
-          title: ev.title,
-          type: ev.type,
-          room: ev.room,
-          start: new Date(ev.start),
-          end: new Date(ev.end),
-        }));
+      .then((data: RawEvent[]) => {
+        const parsed: CustomEvent[] = data
+          .filter((ev) => isValidType(ev.type))
+          .map((ev) => ({
+            id: ev._id,
+            title: ev.title,
+            type: ev.type as EventType,
+            room: ev.room,
+            start: new Date(ev.start),
+            end: new Date(ev.end),
+          }));
         setEvents(parsed);
         setLoading(false);
       });
   }, []);
 
-  const handleSelectSlot = ({ start, end }: any) => {
+  const handleSelectSlot = ({ start, end }: SlotInfo) => {
     setModalAdd({
       open: true,
       event: { title: "", type: "Consultation", room: ROOMS[0], start, end },
@@ -104,14 +101,16 @@ export default function SchedulePage() {
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget as any;
+
+    const formData = new FormData(e.currentTarget);
     const id = modalAdd.event?.id;
+
     const payload: CustomEvent = {
-      title: form.title.value,
-      type: form.type.value,
-      room: form.room.value,
-      start: new Date(form.start.value),
-      end: new Date(form.end.value),
+      title: formData.get("title") as string,
+      type: formData.get("type") as EventType,
+      room: formData.get("room") as string,
+      start: new Date(formData.get("start") as string),
+      end: new Date(formData.get("end") as string),
     };
 
     if (isOverlapping(payload.start, payload.end, payload.room, id)) {

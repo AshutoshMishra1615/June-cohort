@@ -1,20 +1,17 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Prescription from "@/model/Prescription";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export async function POST(req: NextRequest) {
   await dbConnect();
+  const body = await req.json();
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { patientId, symptoms, diagnosis } = req.body;
+  const { patientId, symptoms, diagnosis } = body;
 
   if (!patientId || !symptoms?.length || !diagnosis) {
-    return res.status(400).json({ error: "Missing input" });
+    return NextResponse.json({ error: "Missing input" }, { status: 400 });
   }
 
   const prompt = `
@@ -38,7 +35,7 @@ Return the prescription in this format:
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -49,7 +46,6 @@ Return the prescription in this format:
 
     const data = await response.json();
     const aiText = data.choices?.[0]?.message?.content;
-
     const medications = JSON.parse(aiText || "[]");
 
     const prescription = await Prescription.create({
@@ -59,9 +55,9 @@ Return the prescription in this format:
       medications,
     });
 
-    return res.status(201).json(prescription);
+    return NextResponse.json(prescription);
   } catch (err) {
     console.error("MCP Error:", err);
-    return res.status(500).json({ error: "Failed to generate prescription" });
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

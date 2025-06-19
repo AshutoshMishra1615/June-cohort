@@ -20,7 +20,7 @@ global.mongooseCache = global.mongooseCache || {
   promise: null,
 };
 
-let cached = global.mongooseCache;
+const cached = global.mongooseCache;
 
 async function dbConnect() {
   if (cached.conn) return cached.conn;

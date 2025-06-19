@@ -82,8 +82,8 @@
   min-width: 80px !important;
 }
 .rbc-time-header {
-  margin: 0 !important;
-  padding-right: 10px !important;
+  /* margin: 0 !important; */
+  /* padding-right: 10px !important; */
 }
 
 @theme inline {

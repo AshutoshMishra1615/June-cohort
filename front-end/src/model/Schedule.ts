@@ -1,4 +1,3 @@
-// src/model/Schedule.ts
 import mongoose from "mongoose";
 
 const ScheduleSchema = new mongoose.Schema({

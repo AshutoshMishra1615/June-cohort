@@ -96,7 +96,7 @@
   background-color: #1f2937 !important;
 }
 .rbc-time-content {
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
 }
 .rbc-time-header.rbc-overflowing {
   margin-right: 0px !important;

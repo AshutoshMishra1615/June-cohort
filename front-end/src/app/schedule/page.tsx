@@ -314,7 +314,9 @@ export default function SchedulePage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{modalView?.title}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription>Event details below:</DialogDescription>
+
+            <div className="space-y-1 mt-2 text-sm text-muted-foreground">
               <div>
                 <strong>Type:</strong> {modalView?.type}
               </div>
@@ -327,7 +329,7 @@ export default function SchedulePage() {
               <div>
                 <strong>To:</strong> {modalView?.end.toLocaleString()}
               </div>
-            </DialogDescription>
+            </div>
           </DialogHeader>
           <DialogFooter className="flex justify-between">
             <Button variant="destructive" onClick={handleDelete}>

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, dateFnsLocalizer, SlotInfo } from "react-big-calendar";
+import {
+  Calendar,
+  dateFnsLocalizer,
+  SlotInfo,
+  EventPropGetter,
+} from "react-big-calendar";
 import {
   format,
   parse,
@@ -11,8 +16,7 @@ import {
   isAfter,
 } from "date-fns";
 import { enUS } from "date-fns/locale";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-
+import "./calendar.css";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RawEvent, CustomEvent, EventType } from "@/types/schedule";
+import CustomToolbar from "@/components/CustomToolbar";
 
 const localizer = dateFnsLocalizer({
   format,
@@ -42,7 +47,15 @@ const localizer = dateFnsLocalizer({
   locales: { "en-US": enUS },
 });
 
-const ROOMS = ["Room A", "Room B", "Room C"];
+const ROOMS = [
+  "Room A",
+  "Room B",
+  "Room C",
+  "Room D",
+  "Room E",
+  "ICU",
+  "Diddy's Room",
+];
 const TYPES = ["Consultation", "Meeting", "Operation"];
 
 export default function SchedulePage() {
@@ -151,7 +164,18 @@ export default function SchedulePage() {
     }
   };
 
-  const eventStyle = (event: CustomEvent) => ({
+  function CustomEvent({ event }: { event: CustomEvent }) {
+    return (
+      <div className="h-full w-full flex flex-col justify-center items-center text-center px-1">
+        <div className="font-semibold text-sm">{event.title}</div>
+        <div className="text-xs opacity-80">
+          {event.room} | {event.type}
+        </div>
+      </div>
+    );
+  }
+
+  const eventStyle: EventPropGetter<CustomEvent> = (event) => ({
     style: {
       backgroundColor:
         event.type === "Consultation"
@@ -159,15 +183,21 @@ export default function SchedulePage() {
           : event.type === "Meeting"
           ? "#FDE68A"
           : "#FCA5A5",
-      borderRadius: "6px",
-      color: "#000",
-      padding: "4px",
+      borderRadius: "8px",
+      whiteSpace: "pre-line",
+      color: "#111827",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      textAlign: "center", // ✅ valid string, now typed
+      fontWeight: "500",
+      fontSize: "0.85rem",
+      padding: "6px",
     },
   });
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6 text-center">Schedule</h1>
       {loading && <p className="text-center mb-4">Loading...</p>}
       <div className="shadow-lg rounded-lg overflow-hidden">
         <Calendar
@@ -179,10 +209,15 @@ export default function SchedulePage() {
           onSelectSlot={handleSelectSlot}
           onSelectEvent={(e) => setModalView(e)}
           defaultView="week"
-          step={30}
-          timeslots={2}
+          step={15}
+          timeslots={4}
           eventPropGetter={eventStyle}
-          style={{ height: "85vh" }}
+          toolbar={true}
+          components={{
+            event: CustomEvent,
+            toolbar: CustomToolbar,
+          }}
+          style={{ height: "94vh" }}
         />
       </div>
 
@@ -280,18 +315,18 @@ export default function SchedulePage() {
           <DialogHeader>
             <DialogTitle>{modalView?.title}</DialogTitle>
             <DialogDescription>
-              <p>
+              <div>
                 <strong>Type:</strong> {modalView?.type}
-              </p>
-              <p>
+              </div>
+              <div>
                 <strong>Room:</strong> {modalView?.room}
-              </p>
-              <p>
+              </div>
+              <div>
                 <strong>From:</strong> {modalView?.start.toLocaleString()}
-              </p>
-              <p>
+              </div>
+              <div>
                 <strong>To:</strong> {modalView?.end.toLocaleString()}
-              </p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex justify-between">

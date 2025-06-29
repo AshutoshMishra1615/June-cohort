@@ -23,10 +23,9 @@
   }
 }
 */
-
-.rbc-calendar {
+/* .rbc-calendar {
   font-family: "Inter", sans-serif !important;
-  /* height: auto !important; */
+  height: auto !important;
   padding: 3rem !important;
 }
 .rbc-toolbar {
@@ -82,9 +81,9 @@
   min-width: 80px !important;
 }
 .rbc-time-header {
-  /* margin: 0 !important; */
-  /* padding-right: 10px !important; */
-}
+  margin: 0 !important;
+  padding-right: 10px !important;
+} */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

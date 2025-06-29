@@ -25,8 +25,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  function cn(...classes: (string | boolean | undefined | null)[]): string {
+    return classes.filter(Boolean).join(" ");
+  }
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={cn("font-sans")} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -17,10 +17,14 @@ export async function middleware(request: NextRequest) {
     url.pathname.startsWith("/verify") ||
     url.pathname === "/";
 
+  const isContentPage =
+    url.pathname.startsWith("/dashboard") ||
+    url.pathname.startsWith("/schedule");
+
   if (token && isAuthPage) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
-  if (!token && url.pathname.startsWith("/dashboard")) {
+  if (!token && isContentPage) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
   return NextResponse.next();
@@ -28,5 +32,13 @@ export async function middleware(request: NextRequest) {
 
 // See "Matching Paths" below to learn more
 export const config = {
-  matcher: ["/", "/signin", "/signup", "/signout", "/dashboard/:path*"],
+  matcher: [
+    "/",
+    "/signin",
+    "/signup",
+    "/signout",
+    "/dashboard/:path*",
+    "/schedule/:path*",
+    "/verify",
+  ],
 };
